@@ -23,7 +23,7 @@ async def upload_document(file:UploadFile=File(...)):
     file_path.write_bytes(file_content)
 
     try:
-        text=process_uploaded_document(file_path)
+        processed_document=process_uploaded_document(file_path)
     except FileNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
@@ -37,7 +37,7 @@ async def upload_document(file:UploadFile=File(...)):
             'content_type':file.content_type,
             'saved_path':str(file_path),
             'file_size':len(file_content),
-            'text':text,}
+            'processed_document':processed_document,}
 
 
 
