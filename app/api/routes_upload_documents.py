@@ -21,9 +21,12 @@ async def upload_document(file:UploadFile=File(...)):
     UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
     file_path=UPLOAD_DIR/filename
     file_path.write_bytes(file_content)
-
+    file_info={'filename': filename,
+     'content_type': file.content_type,
+     'saved_path': str(file_path),
+     'file_size': len(file_content),}
     try:
-        processed_document=process_uploaded_document(file_path)
+        processed_document=process_uploaded_document(file_path,file_info)
     except FileNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
@@ -33,11 +36,4 @@ async def upload_document(file:UploadFile=File(...)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
 
-    return {'file_name':filename,
-            'content_type':file.content_type,
-            'saved_path':str(file_path),
-            'file_size':len(file_content),
-            'processed_document':processed_document,}
-
-
-
+    return {**file_info,**processed_document}
