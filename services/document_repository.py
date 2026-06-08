@@ -1,6 +1,7 @@
 from models.database import SessionLocal
 from models.document_models import Document, DocumentChunk
 
+
 def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
 
     if chunks is None:
@@ -35,4 +36,47 @@ def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
     return document_id
 
 
+def update_chunks_embeddings(document_id: int,embeddings: list[list[float]],)-> dict:
+    if not embeddings:
+        raise ValueError("Embeddings cannot be empty.")
 
+    db = SessionLocal()
+
+    try:
+        document = db.query(Document).filter(Document.id == document_id).first()
+
+        if document is None:
+            raise ValueError(f"Document not found: {document_id}")
+
+        db_chunks = (
+            db.query(DocumentChunk)
+            .filter(DocumentChunk.document_id == document_id)
+            .order_by(DocumentChunk.chunk_index)
+            .all()
+        )
+
+        if not db_chunks:
+            raise ValueError(f"No chunks found for document: {document_id}")
+
+        if len(db_chunks) != len(embeddings):
+            raise ValueError("Embedding count does not match chunk count.")
+
+        for db_chunk, embedding in zip(db_chunks, embeddings):
+            db_chunk.embedding = embedding
+
+        document.status = "embedded"
+
+        db.commit()
+
+        return {
+            "document_id": document_id,
+            "status": document.status,
+            "embedded_chunk_count": len(db_chunks),
+        }
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        db.close()

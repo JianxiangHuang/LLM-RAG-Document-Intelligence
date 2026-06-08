@@ -5,3 +5,4 @@ python-multipart
 sqlalchemy
 psycopg[binary]
 pgvector
+openai
