@@ -7,7 +7,7 @@ from services.document_repository import search_similar_chunks
 from services.embedding_service import embed_text
 
 DEFAULT_TOP_K = 5
-LLM_MODEL = "DeepSeek-V4-Pro"
+LLM_MODEL = "deepseek-v4-pro"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_CONTEXT_CHARACTERS = 80000
 
@@ -36,8 +36,10 @@ def answer_question(question: str) -> dict:
     response = client.chat.completions.create(
         model=LLM_MODEL,
         messages=_build_messages(question, context),
+        stream=False,
+        reasoning_effort="high",
+        extra_body={"thinking": {"type": "enabled"}},
     )
-
     return {
         "question": question,
         "answer": response.choices[0].message.content,
