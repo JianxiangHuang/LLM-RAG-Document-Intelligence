@@ -80,3 +80,52 @@ def update_chunks_embeddings(document_id: int,embeddings: list[list[float]],)-> 
 
     finally:
         db.close()
+
+
+def search_similar_chunks(embed_question: list[float], top_k: int = 5) -> list[dict]:
+    if not embed_question:
+        raise ValueError("Query embedding cannot be empty.")
+
+    if top_k <= 0:
+        raise ValueError("top_k must be greater than 0.")
+
+    if top_k > 20:
+        raise ValueError("top_k must be less than or equal to 20.")
+
+    db = SessionLocal()
+
+    try:
+        distance = DocumentChunk.embedding.cosine_distance(embed_question).label("distance")
+
+        rows = (
+            db.query(DocumentChunk, Document, distance)
+            .join(Document, DocumentChunk.document_id == Document.id)
+            .filter(DocumentChunk.embedding.isnot(None))
+            .order_by(distance)
+            .limit(top_k)
+            .all()
+        )
+
+        results = []
+
+        for chunk, document, distance_value in rows:
+            results.append(
+                {
+                    "distance": float(distance_value),
+                    "document_id": document.id,
+                    "chunk_id": chunk.id,
+                    "filename": document.filename,
+                    "content_type": document.content_type,
+                    "chunk_count": document.chunk_count,
+                    "created_at": document.created_at.isoformat(),
+                    "chunk_index": chunk.chunk_index,
+                    "text": chunk.text,
+                    "start_char": chunk.start_char,
+                    "end_char": chunk.end_char,
+                }
+            )
+
+        return results
+
+    finally:
+        db.close()
