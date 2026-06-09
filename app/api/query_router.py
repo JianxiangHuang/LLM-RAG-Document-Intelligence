@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from app.api.error_handlers import map_exception_to_http
 from services.rag_query_service import answer_question, semantic_search
 
 
@@ -20,10 +21,8 @@ def search_api(search_question: SearchQuestion):
 
         return semantic_search(question)
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    except Exception as e:
+        raise map_exception_to_http(e)
 
 
 @router.post("/answer")
@@ -35,7 +34,5 @@ def answer_api(search_question: SearchQuestion):
 
         return answer_question(question)
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    except Exception as e:
+        raise map_exception_to_http(e)

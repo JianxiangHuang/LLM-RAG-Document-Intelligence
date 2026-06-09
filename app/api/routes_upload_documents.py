@@ -1,6 +1,8 @@
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException,UploadFile,status
+
+from app.api.error_handlers import map_exception_to_http
 from services.process_uploaded_document import process_uploaded_document
 from services.document_parser import SUPPORTED_DOCUMENT_EXTENSIONS
 
@@ -33,7 +35,8 @@ async def upload_document(file:UploadFile=File(...)):
     except UnicodeDecodeError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Could not decode document as UTF-8 text.",)
 
+
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=str(e))
+        raise map_exception_to_http(e)
 
     return {**file_info,**processed_document}

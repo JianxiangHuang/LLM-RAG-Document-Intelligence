@@ -1,6 +1,8 @@
+from sqlalchemy.exc import SQLAlchemyError
+
 from models.database import SessionLocal
 from models.document_models import Document, DocumentChunk
-
+from services.exceptions import DatabaseAccessError
 
 def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
 
@@ -10,8 +12,8 @@ def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
     if not chunks:
         raise ValueError("Document must have at least one chunk.")
 
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         db_document=Document(**file_info,status=status)
         db.add(db_document)
         db.flush()
@@ -27,7 +29,10 @@ def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
             chunk_rows.append(db_document_chunk)
         db.add_all(chunk_rows)
         db.commit()
-    except:
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise DatabaseAccessError("Failed to save document and chunks.") from e
+    except Exception:
         db.rollback()
         raise
     finally:
@@ -73,6 +78,9 @@ def update_chunks_embeddings(document_id: int,embeddings: list[list[float]],)-> 
             "status": document.status,
             "embedded_chunk_count": len(db_chunks),
         }
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise DatabaseAccessError("Failed to update chunk embeddings.") from e
 
     except Exception:
         db.rollback()
@@ -108,14 +116,14 @@ def search_similar_chunks(embed_question: list[float], top_k: int = 5) -> list[d
 
         results = []
 
-        for chunk, document, distance_value in rows:
+        for source_id, (chunk, document, distance_value) in enumerate(rows, start=1):
             results.append(
                 {
+                    "source_id": source_id,
                     "distance": float(distance_value),
                     "document_id": document.id,
                     "chunk_id": chunk.id,
                     "filename": document.filename,
-                    "content_type": document.content_type,
                     "chunk_count": document.chunk_count,
                     "created_at": document.created_at.isoformat(),
                     "chunk_index": chunk.chunk_index,
@@ -126,6 +134,7 @@ def search_similar_chunks(embed_question: list[float], top_k: int = 5) -> list[d
             )
 
         return results
-
+    except SQLAlchemyError as e:
+        raise DatabaseAccessError("Failed to search similar chunks.") from e
     finally:
         db.close()

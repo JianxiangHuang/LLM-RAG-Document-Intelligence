@@ -5,6 +5,13 @@ from openai import OpenAI
 
 from services.document_repository import search_similar_chunks
 from services.embedding_service import embed_text
+from services.exceptions import (
+    DatabaseAccessError,
+    LLMServiceError,
+    RetrievalServiceError,
+    SystemConfigurationError,
+)
+
 
 DEFAULT_TOP_K = 5
 LLM_MODEL = "deepseek-v4-pro"
@@ -21,6 +28,7 @@ def semantic_search(question: str) -> dict:
 
     return {
         "question": question,
+        "result_count": len(chunks),
         "sources": chunks,
     }
 
@@ -31,30 +39,35 @@ def answer_question(question: str) -> dict:
 
     chunks = _retrieve_relevant_chunks(question)
 
-    context = format_chunks_as_context(chunks) if chunks else ""
-    client = _create_llm_client()
-    response = client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=_build_messages(question, context),
-        stream=False,
-        reasoning_effort="high",
-        extra_body={"thinking": {"type": "enabled"}},
-    )
+    context = _format_chunks_as_context(chunks) if chunks else ""
+    try:
+        client = _create_llm_client()
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=_build_messages(question, context),
+            stream=False,
+            reasoning_effort="high",
+            extra_body={"thinking": {"type": "enabled"}},
+        )
+    except Exception as e:
+        raise LLMServiceError("Failed to generate an answer using the LLM.") from e
     return {
         "question": question,
         "answer": response.choices[0].message.content,
+        "answer_mode": "rag" if chunks else "llm_only",
+        "source_count": len(chunks),
         "sources": chunks,
     }
 
 
-def format_chunks_as_context(chunks: list[dict]) -> str:
+def _format_chunks_as_context(chunks: list[dict]) -> str:
     context_parts = []
     total_characters = 0
 
-    for source_number, chunk in enumerate(chunks, start=1):
+    for chunk in chunks:
         chunk_text = chunk["text"]
         source_text = (
-            f"[Source {source_number}]\n"
+            f"[Source {chunk['source_id']}]\n"
             f"document_id: {chunk['document_id']}\n"
             f"filename: {chunk['filename']}\n"
             f"chunk_index: {chunk['chunk_index']}\n"
@@ -72,8 +85,12 @@ def format_chunks_as_context(chunks: list[dict]) -> str:
 
 
 def _retrieve_relevant_chunks(question: str) -> list[dict]:
-    query_embedding = embed_text(question)
-    return search_similar_chunks(query_embedding, DEFAULT_TOP_K)
+    try:
+        query_embedding = embed_text(question)
+        result = search_similar_chunks(query_embedding, DEFAULT_TOP_K)
+    except DatabaseAccessError as e:
+        raise RetrievalServiceError("Failed to retrieve relevant chunks from the database.") from e
+    return result
 
 
 def _build_messages(question: str, context: str) -> list[dict]:
@@ -117,7 +134,7 @@ def _normalize_question(question: str) -> str:
 
 def _ensure_llm_api_key() -> None:
     if DEEPSEEK_API_KEY is None:
-        raise RuntimeError("DEEPSEEK_API_KEY environment variable is not set.")
+        raise SystemConfigurationError("DEEPSEEK_API_KEY environment variable is not set.")
 
 
 def _create_llm_client() -> OpenAI:
