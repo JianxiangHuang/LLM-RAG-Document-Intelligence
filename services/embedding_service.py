@@ -33,3 +33,9 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
     return embeddings
 
+
+def embed_text(text: str) -> list[float]:
+    if not text.strip():
+        raise ValueError("Text cannot be empty.")
+
+    return embed_texts([text])[0]
