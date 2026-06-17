@@ -22,6 +22,20 @@ class Document(Base):
 
     chunks = relationship("DocumentChunk", back_populates="document")
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "filename": self.filename,
+            "saved_path": self.saved_path,
+            "content_type": self.content_type,
+            "file_size": self.file_size,
+            "status": self.status,
+            "char_count": self.char_count,
+            "chunk_count": self.chunk_count,
+            "created_at": self.created_at,
+        }
+
+
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"
