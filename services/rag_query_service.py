@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from services.document_repository import search_similar_chunks
+from repositories.document_repository import search_similar_chunks
 from services.embedding_service import embed_text
 from services.exceptions import (
     DatabaseAccessError,
@@ -11,7 +11,6 @@ from services.exceptions import (
     RetrievalServiceError,
     SystemConfigurationError,
 )
-
 
 DEFAULT_TOP_K = 5
 LLM_MODEL = "deepseek-v4-pro"

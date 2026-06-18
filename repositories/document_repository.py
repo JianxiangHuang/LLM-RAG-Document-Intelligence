@@ -5,6 +5,19 @@ from models.document_models import Document, DocumentChunk
 from services.exceptions import DatabaseAccessError
 
 
+def list_documents(limit: int = 20) -> list[dict]:
+    db = SessionLocal()
+    try:
+        documents = db.query(Document).order_by(Document.created_at.desc()).limit(limit).all()
+        return [document.to_dict() for document in documents]
+    except SQLAlchemyError as e:
+        raise DatabaseAccessError("Failed to get documents status.") from e
+    except Exception:
+        raise
+    finally:
+        db.close()
+
+
 def save_uploaded_document_info(file_info: dict) -> int:
     if file_info is None:
         raise ValueError("File info cannot be None")
@@ -48,9 +61,9 @@ def get_document_info(document_id: int) -> dict:
 
 
 def update_document_charcount_and_chunkcount(
-    document_id: int,
-    char_count: int,
-    chunk_count: int,
+        document_id: int,
+        char_count: int,
+        chunk_count: int,
 ) -> int:
     if document_id is None or char_count is None or chunk_count is None:
         raise ValueError("Document info cannot be None")
@@ -146,8 +159,8 @@ def change_document_status(document_id: int, status: str) -> None:
     finally:
         db.close()
 
-def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
 
+def save_document_with_chunks(file_info: dict, status: str, chunks: list[dict]) -> int:
     if chunks is None:
         raise ValueError("Chunks cannot be None")
 
@@ -156,18 +169,18 @@ def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
 
     db = SessionLocal()
     try:
-        db_document=Document(**file_info,status=status)
+        db_document = Document(**file_info, status=status)
         db.add(db_document)
         db.flush()
         document_id = db_document.id
 
         chunk_rows = []
         for chunk in chunks:
-            db_document_chunk=DocumentChunk(document_id=document_id,
-                                            chunk_index=chunk['chunk_index'],
-                                            text=chunk['text'],
-                                            start_char=chunk['start_char'],
-                                            end_char=chunk['end_char'],)
+            db_document_chunk = DocumentChunk(document_id=document_id,
+                                              chunk_index=chunk['chunk_index'],
+                                              text=chunk['text'],
+                                              start_char=chunk['start_char'],
+                                              end_char=chunk['end_char'], )
             chunk_rows.append(db_document_chunk)
         db.add_all(chunk_rows)
         db.commit()
@@ -183,7 +196,7 @@ def save_document_with_chunks(file_info:dict,status:str,chunks:list[dict])->int:
     return document_id
 
 
-def update_chunks_embeddings(document_id: int,embeddings: list[list[float]],)-> dict:
+def update_chunks_embeddings(document_id: int, embeddings: list[list[float]], ) -> dict:
     if not embeddings:
         raise ValueError("Embeddings cannot be empty.")
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from services import embedding_service
 from services.document_chunker import chunk_text
 from services.document_parser import parse_document
-from services.document_repository import (
+from repositories.document_repository import (
     change_document_status,
     get_document_info,
     save_document_chunks,
