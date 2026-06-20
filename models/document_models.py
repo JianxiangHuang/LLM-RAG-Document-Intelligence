@@ -19,7 +19,7 @@ class Document(Base):
     char_count = Column(Integer, nullable=False)
     chunk_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
+    file_hash = Column(String(64), nullable=False, index=True)
     chunks = relationship("DocumentChunk", back_populates="document")
 
     def to_dict(self) -> dict:
@@ -33,6 +33,7 @@ class Document(Base):
             "char_count": self.char_count,
             "chunk_count": self.chunk_count,
             "created_at": self.created_at,
+            "file_hash": self.file_hash,
         }
 
 

@@ -12,10 +12,37 @@ def list_documents(limit: int = 20) -> list[dict]:
         return [document.to_dict() for document in documents]
     except SQLAlchemyError as e:
         raise DatabaseAccessError("Failed to get documents status.") from e
-    except Exception:
-        raise
     finally:
         db.close()
+
+def find_document_by_file_hash(file_hash: str)->dict|None:
+
+    if file_hash is None:
+        raise ValueError("File hash cannot be None")
+
+    db = SessionLocal()
+    try:
+        document = db.query(Document).filter(Document.file_hash==file_hash).first()
+        return document.to_dict() if document else None
+    except SQLAlchemyError as e:
+        raise DatabaseAccessError("Failed to find document by file hash.") from e
+    finally:
+        db.close()
+
+def find_document_by_filename(filename: str)->dict|None:
+
+    if filename is None:
+        raise ValueError("File name cannot be None")
+
+    db = SessionLocal()
+    try:
+        document = db.query(Document).filter(Document.filename==filename).first()
+        return document.to_dict() if document else None
+    except SQLAlchemyError as e:
+        raise DatabaseAccessError("Failed to find document by filename.") from e
+    finally:
+        db.close()
+
 
 
 def save_uploaded_document_info(file_info: dict) -> int:
@@ -54,8 +81,6 @@ def get_document_info(document_id: int) -> dict:
         return document.to_dict()
     except SQLAlchemyError as e:
         raise DatabaseAccessError("Failed to get document info.") from e
-    except Exception:
-        raise
     finally:
         db.close()
 

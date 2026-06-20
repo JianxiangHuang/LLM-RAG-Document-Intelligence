@@ -1,11 +1,15 @@
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, status
-
+from fastapi.responses import JSONResponse
 from app.api.error_handlers import map_exception_to_http
 from services.process_uploaded_document import process_uploaded_document, save_uploaded_document_to_db
 from services.document_parser import SUPPORTED_DOCUMENT_EXTENSIONS
 from services.document_status_query_service import get_documents_status
+from services.document_duplicate_checker_service import (
+    calculate_file_hash,
+    find_document_by_file_hash,
+    find_document_by_filename, )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -35,17 +39,45 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File is empty",
         )
+    try:
+        file_hash = calculate_file_hash(file_content)
+        existing_document = find_document_by_file_hash(file_hash)
+        existing_filename = find_document_by_filename(filename)
+    except Exception as e:
+        raise map_exception_to_http(e)
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     file_path = UPLOAD_DIR / filename
-    file_path.write_bytes(file_content)
-
     file_info = {
         "filename": filename,
         "content_type": file.content_type,
         "saved_path": str(file_path),
         "file_size": len(file_content),
+        "file_hash": file_hash,
     }
+
+    if existing_document:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+            "filename": existing_document["filename"],
+            "document_id": existing_document["id"],
+            "status": "duplicate_documents",
+            "file_hash": file_hash,
+        }
+        )
+    elif existing_filename:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "filename": existing_filename["filename"],
+                "document_id": existing_filename["id"],
+                "status": "duplicate_filenames",
+                "file_hash": file_hash,
+            }
+        )
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(file_content)
 
     try:
         document_id = save_uploaded_document_to_db(file_info)
@@ -75,6 +107,7 @@ async def get_all_documents_status(limit: int = 20):
                     "file_size": document["file_size"],
                     "status": document["status"],
                     "chunk_count": document["chunk_count"],
+                    "file_hash": document["file_hash"],
                     "created_at": (
                         document["created_at"].isoformat()
                         if document["created_at"]
