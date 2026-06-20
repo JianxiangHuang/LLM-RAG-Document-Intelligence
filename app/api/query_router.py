@@ -22,6 +22,7 @@ def search_api(search_question: SearchQuestion):
         return semantic_search(question)
 
     except Exception as e:
+        print(e)
         raise map_exception_to_http(e)
 
 
@@ -35,4 +36,5 @@ def answer_api(search_question: SearchQuestion):
         return answer_question(question)
 
     except Exception as e:
+        print(e)
         raise map_exception_to_http(e)

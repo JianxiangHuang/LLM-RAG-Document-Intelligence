@@ -8,3 +8,5 @@ pgvector
 openai
 datasets
 beir
+FlagEmbedding==1.4.0
+transformers>=4.44,<5

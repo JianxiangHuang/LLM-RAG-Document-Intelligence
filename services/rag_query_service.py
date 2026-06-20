@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from repositories.document_repository import search_similar_chunks
 from services.embedding_service import embed_text
+from services.reranker_service import rerank_chunks
 from services.exceptions import (
     DatabaseAccessError,
     LLMServiceError,
@@ -12,7 +13,8 @@ from services.exceptions import (
     SystemConfigurationError,
 )
 
-DEFAULT_TOP_K = 5
+CANDIDATE_TOP_K = 20
+FINAL_TOP_K = 5
 LLM_MODEL = "deepseek-v4-pro"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_CONTEXT_CHARACTERS = 80000
@@ -24,11 +26,11 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 def semantic_search(question: str) -> dict:
     question = _normalize_question(question)
     chunks = _retrieve_relevant_chunks(question)
-
+    final_relevant_chunks=rerank_chunks(question,chunks,FINAL_TOP_K)
     return {
         "question": question,
-        "result_count": len(chunks),
-        "sources": chunks,
+        "result_count": len(final_relevant_chunks),
+        "sources": final_relevant_chunks,
     }
 
 
@@ -36,9 +38,10 @@ def answer_question(question: str) -> dict:
     question = _normalize_question(question)
     _ensure_llm_api_key()
 
-    chunks = _retrieve_relevant_chunks(question)
+    chunks=_retrieve_relevant_chunks(question)
+    final_relevant_chunks=rerank_chunks(question,chunks,FINAL_TOP_K)
 
-    context = _format_chunks_as_context(chunks) if chunks else ""
+    context = _format_chunks_as_context(final_relevant_chunks) if final_relevant_chunks else ""
     try:
         client = _create_llm_client()
         response = client.chat.completions.create(
@@ -53,9 +56,9 @@ def answer_question(question: str) -> dict:
     return {
         "question": question,
         "answer": response.choices[0].message.content,
-        "answer_mode": "rag" if chunks else "llm_only",
-        "source_count": len(chunks),
-        "sources": chunks,
+        "answer_mode": "rag" if final_relevant_chunks else "llm_only",
+        "source_count": len(final_relevant_chunks),
+        "sources": final_relevant_chunks,
     }
 
 
@@ -86,7 +89,7 @@ def _format_chunks_as_context(chunks: list[dict]) -> str:
 def _retrieve_relevant_chunks(question: str) -> list[dict]:
     try:
         query_embedding = embed_text(question)
-        result = search_similar_chunks(query_embedding, DEFAULT_TOP_K)
+        result = search_similar_chunks(query_embedding, CANDIDATE_TOP_K)
     except DatabaseAccessError as e:
         raise RetrievalServiceError("Failed to retrieve relevant chunks from the database.") from e
     return result
