@@ -22,8 +22,12 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 200) -> list[dic
             {
                 "chunk_index": chunk_index,
                 "text": chunk_content,
-                "start_char": start_char,
-                "end_char": end_char,
+                "char_count": len(chunk_content),
+                "source_position": {
+                    "type": "text_offset",
+                    "start_char": start_char,
+                    "end_char": end_char,
+                },
             }
         )
 

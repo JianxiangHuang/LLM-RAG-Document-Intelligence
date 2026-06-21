@@ -44,6 +44,7 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
         existing_document = find_document_by_file_hash(file_hash)
         existing_filename = find_document_by_filename(filename)
     except Exception as e:
+        print(e)
         raise map_exception_to_http(e)
 
     file_path = UPLOAD_DIR / filename
@@ -83,6 +84,7 @@ async def upload_document(background_tasks: BackgroundTasks, file: UploadFile = 
         document_id = save_uploaded_document_to_db(file_info)
         background_tasks.add_task(process_uploaded_document, document_id)
     except Exception as e:
+        print(e)
         raise map_exception_to_http(e)
 
     return {

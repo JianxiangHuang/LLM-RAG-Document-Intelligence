@@ -140,8 +140,7 @@ def save_document_chunks(document_id: int, chunks: list[dict]) -> int:
                 document_id=document_id,
                 chunk_index=chunk["chunk_index"],
                 text=chunk["text"],
-                start_char=chunk["start_char"],
-                end_char=chunk["end_char"],
+                char_count=chunk["char_count"],
             )
             chunk_rows.append(db_document_chunk)
         db.add_all(chunk_rows)
@@ -204,8 +203,7 @@ def save_document_with_chunks(file_info: dict, status: str, chunks: list[dict]) 
             db_document_chunk = DocumentChunk(document_id=document_id,
                                               chunk_index=chunk['chunk_index'],
                                               text=chunk['text'],
-                                              start_char=chunk['start_char'],
-                                              end_char=chunk['end_char'], )
+                                              char_count=chunk['char_count'], )
             chunk_rows.append(db_document_chunk)
         db.add_all(chunk_rows)
         db.commit()
@@ -308,8 +306,7 @@ def search_similar_chunks(embed_question: list[float], top_k: int = 5) -> list[d
                     "created_at": document.created_at.isoformat(),
                     "chunk_index": chunk.chunk_index,
                     "text": chunk.text,
-                    "start_char": chunk.start_char,
-                    "end_char": chunk.end_char,
+                    "char_count": chunk.char_count,
                 }
             )
 
