@@ -38,6 +38,7 @@ def simple_chunking(text: str, chunk_size: int = 800, overlap: int = 200) -> lis
 
 
 BIG_MAX_TOKENS = 6000
+SMALL_MIN_TOKENS = 50
 SMALL_MAX_TOKENS = 600
 
 
@@ -144,7 +145,7 @@ def _build_small_chunks(original_text: str, atomic_units: list[dict], boundary_s
     if right_index - left_index == 0:
         return None
 
-    if right_index - left_index == 1:
+    if right_index - left_index == 1 and atomic_units[left_index]["token_count"]>=SMALL_MIN_TOKENS and atomic_units[right_index]["token_count"]>=SMALL_MIN_TOKENS:
         start_char_left = atomic_units[left_index]["start_char"]
         end_char_left = atomic_units[left_index]["end_char"]
         start_char_right = atomic_units[right_index]["start_char"]
@@ -243,7 +244,7 @@ def _build_small_chunk(chunk_text: str, chunk_index, source_position: dict, pare
 
 
 def _dynamic_percentile_small(tokens: int) -> float:
-    min_token = 50
+    min_token = SMALL_MIN_TOKENS
     mid_token = 200
     max_token = SMALL_MAX_TOKENS
     percentile_at_min = 0.7
