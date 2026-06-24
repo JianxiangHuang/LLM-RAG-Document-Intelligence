@@ -45,7 +45,7 @@ class DocumentChunk(Base):
 
     id = Column(Integer, primary_key=True)
     document_id = Column(Integer,ForeignKey("documents.id"),nullable=False,index=True,)
-    chunk_index = Column(Integer, nullable=False)
+    chunk_index = Column(Integer, nullable=False)  
     chunk_method=Column(String(50), nullable=False,default="fixed",)
     chunk_type=Column(String(50), nullable=False,default="small",)
     parent_chunk_id = Column(Integer,ForeignKey("document_chunks.id",ondelete="SET NULL"), nullable=True,index=True)

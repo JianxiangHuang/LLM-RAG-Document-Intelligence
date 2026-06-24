@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from services import embedding_service
-from services.document_chunker import chunk_text
+from services.document_chunker import simple_chunking
 from services.document_parser import parse_document
 from repositories.document_repository import (
     change_document_status,
@@ -20,7 +20,7 @@ def process_uploaded_document(document_id: int) -> None:
         path = Path(document_info["saved_path"])
 
         text = parse_document(path)
-        chunks = chunk_text(text)
+        chunks = simple_chunking(text)
 
         update_document_charcount_and_chunkcount(document_id, len(text), len(chunks))
         save_document_chunks(document_id, chunks)

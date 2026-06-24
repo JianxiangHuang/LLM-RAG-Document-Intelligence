@@ -33,6 +33,13 @@ env/
 .coverage
 htmlcov/
 
+# Local retrieval-evaluation scripts and results
+/eval/
+/scripts/eval/
+/scripts/eval_beir_fiqa_retrieval.py
+/scripts/import_beir_fiqa_corpus.py
+/scripts/inspect_beir_fiqa_official.py
+
 # OS generated files
 .DS_Store
 Thumbs.db
